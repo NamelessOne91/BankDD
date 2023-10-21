@@ -10,6 +10,7 @@ import (
 
 var ErrorAccountIsOpen = errors.New("operation failed: the account has already been opened")
 var ErrorInactiveAccount = errors.New("operation failed: the account is inactive")
+var ErrorInvalidAmount = errors.New("operation failed: the amount must be > 0")
 var ErrorInsufficientCredit = errors.New("operation failed: the accoun't balance is insufficient")
 
 type Currency int64
@@ -50,6 +51,10 @@ func (a *BankAccount) Open(startingAmount Currency) error {
 	if a.active {
 		return ErrorAccountIsOpen
 	}
+	if startingAmount <= 0*Euro {
+		return ErrorInvalidAmount
+	}
+
 	a.balance = startingAmount
 	a.openDate = time.Now()
 	a.closeDate = time.Time{}
@@ -88,6 +93,10 @@ func (a *BankAccount) Deposit(amount Currency) (Currency, error) {
 	if !a.active {
 		return 0, ErrorInactiveAccount
 	}
+	if amount <= 0*Euro {
+		return 0, ErrorInvalidAmount
+	}
+
 	a.balance += amount
 	return a.balance, nil
 }
@@ -99,9 +108,13 @@ func (a *BankAccount) Withdraw(amount Currency) (Currency, error) {
 	if !a.active {
 		return 0, ErrorInactiveAccount
 	}
+	if amount <= 0*Euro {
+		return 0, ErrorInvalidAmount
+	}
 	if a.balance < amount {
 		return 0, ErrorInsufficientCredit
 	}
+
 	a.balance -= amount
 	return a.balance, nil
 }
