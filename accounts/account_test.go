@@ -11,7 +11,7 @@ import (
 var _ = Describe("Account", func() {
 	var startingCurrency = 1000*accounts.Euro + 50*accounts.Cent
 
-	Describe("can open a new bank account properly", func() {
+	When("a user opens a new bank account", func() {
 		var account = accounts.NewBankAccount()
 		Expect(account.Open(startingCurrency)).To(Succeed())
 
@@ -32,7 +32,7 @@ var _ = Describe("Account", func() {
 		})
 	})
 
-	Describe("can close an existing bank account properly", func() {
+	When(" a user closes an existing bank account", func() {
 		var account accounts.Account
 
 		BeforeEach(func() {
@@ -67,9 +67,8 @@ var _ = Describe("Account", func() {
 		})
 	})
 
-	Describe("can deposit money to an open account", func() {
-
-		DescribeTable("correctly updates the account's balance after a deposit",
+	When("a user deposits money to an open account", func() {
+		DescribeTable("the account's balance is correctly updated after sequential deposits",
 			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) {
 				var account = accounts.NewBankAccount()
 				Expect(account.Open(start)).To(Succeed())
