@@ -12,7 +12,7 @@ var _ = Describe("Account", func() {
 
 	Describe("can open a new bank account properly", func() {
 		var account = accounts.NewBankAccount()
-		account.Open(startingCurrency)
+		Expect(account.Open(startingCurrency)).To(Succeed())
 
 		It("is active", func() {
 			_, err := account.Balance()
@@ -25,6 +25,10 @@ var _ = Describe("Account", func() {
 			Expect(err).To(BeNil())
 			Expect(b).To(Equal(startingCurrency))
 		})
+
+		It("returns an error if we try to open an active account", func() {
+			Expect(account.Open(startingCurrency)).To(Equal(accounts.ErrorAccountIsOpen))
+		})
 	})
 
 	Describe("can close an existing bank account properly", func() {
@@ -32,7 +36,7 @@ var _ = Describe("Account", func() {
 
 		BeforeEach(func() {
 			account = accounts.NewBankAccount()
-			account.Open(startingCurrency)
+			Expect(account.Open(startingCurrency)).To(Succeed())
 			Expect(account.Close()).To(Succeed())
 		})
 
@@ -61,5 +65,4 @@ var _ = Describe("Account", func() {
 			Expect(err).To(Equal(accounts.ErrorInactiveAccount))
 		})
 	})
-
 })

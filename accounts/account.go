@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrorAccountIsOpen = errors.New("operation failed: the account has already been opened")
 var ErrorInactiveAccount = errors.New("operation failed: the account is inactive")
 var ErrorInsufficientCredit = errors.New("operation failed: the accoun't balance is insufficient")
 
@@ -19,7 +20,7 @@ const (
 )
 
 type Account interface {
-	Open(Currency) Account
+	Open(Currency) error
 	Close() error
 	Balance() (Currency, error)
 	Deposit(Currency) (Currency, error)
@@ -42,11 +43,18 @@ func NewBankAccount() *BankAccount {
 	}
 }
 
-func (a *BankAccount) Open(startingAmount Currency) Account {
+func (a *BankAccount) Open(startingAmount Currency) error {
+	a.m.Lock()
+	defer a.m.Unlock()
+
+	if a.active {
+		return ErrorAccountIsOpen
+	}
 	a.balance = startingAmount
 	a.openDate = time.Now()
+	a.closeDate = time.Time{}
 	a.active = true
-	return a
+	return nil
 }
 
 func (a *BankAccount) Close() error {
