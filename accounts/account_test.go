@@ -42,7 +42,8 @@ var _ = Describe("Account", func() {
 		})
 
 		It("returns an error if we try to close it again", func() {
-			Expect(account.Close()).ToNot(Succeed())
+			err := account.Close()
+			Expect(err).To(Equal(accounts.ErrorInactiveAccount))
 		})
 
 		It("returns an error if we try to deposit money", func() {
