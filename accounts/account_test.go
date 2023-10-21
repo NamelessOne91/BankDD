@@ -68,6 +68,24 @@ var _ = Describe("Account", func() {
 	})
 
 	When("a user deposits money to an open account", func() {
+		var account accounts.Account
+
+		It("fails to deposit an amount = 0", func() {
+			account = accounts.NewBankAccount()
+			Expect(account.Open(startingCurrency)).To(Succeed())
+
+			_, err := account.Deposit(0 * accounts.Euro)
+			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
+		})
+
+		It("fails to deposit a negative amount", func() {
+			account = accounts.NewBankAccount()
+			Expect(account.Open(startingCurrency)).To(Succeed())
+
+			_, err := account.Deposit(-100 * accounts.Euro)
+			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
+		})
+
 		DescribeTable("the account's balance is correctly updated after sequential deposits",
 			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) {
 				var account = accounts.NewBankAccount()
@@ -82,9 +100,9 @@ var _ = Describe("Account", func() {
 			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) string {
 				return fmt.Sprintf("start: %d - deposits: %v - expected balance: %d", start, deposits, expectedBalance)
 			},
-			Entry(nil, 0*accounts.Euro, []accounts.Currency{}, 0*accounts.Euro),
-			Entry(nil, 0*accounts.Euro, []accounts.Currency{100 * accounts.Euro}, 100*accounts.Euro),
-			Entry(nil, 0*accounts.Euro, []accounts.Currency{100 * accounts.Euro, 30 * accounts.Cent}, (100*accounts.Euro+30*accounts.Cent)),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{}, 10*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{100 * accounts.Euro}, 110*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{100 * accounts.Euro, 30 * accounts.Cent}, (110*accounts.Euro+30*accounts.Cent)),
 			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro}, (1870*accounts.Euro+50*accounts.Cent)),
 			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro, 3 * accounts.Cent}, (1870*accounts.Euro+53*accounts.Cent)),
 		)
