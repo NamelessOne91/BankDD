@@ -164,18 +164,48 @@ var _ = Describe("Account", func() {
 		})
 
 		DescribeTable("the account's balance is correctly updated after sequential withdraws",
-			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) {
+			func(start accounts.Currency, withdraws []accounts.Currency, expectedBalance accounts.Currency) {
 				var account = accounts.NewBankAccount()
 				Expect(account.Open(start)).To(Succeed())
 
-				for _, amount := range deposits {
+				for _, amount := range withdraws {
 					_, err := account.Withdraw(amount)
 					Expect(err).To(BeNil())
 				}
 				Expect(account.Balance()).To(Equal(expectedBalance))
 			},
-			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) string {
-				return fmt.Sprintf("start: %d - deposits: %v - expected balance: %d", start, deposits, expectedBalance)
+			func(start accounts.Currency, withdraws []accounts.Currency, expectedBalance accounts.Currency) string {
+				return fmt.Sprintf("start: %d - withdraws: %v - expected balance: %d", start, withdraws, expectedBalance)
+			},
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{}, 10*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{1 * accounts.Euro}, 9*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{1 * accounts.Euro, 10 * accounts.Cent}, (8*accounts.Euro+90*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro}, (129*accounts.Euro+50*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro, 3 * accounts.Cent}, (129*accounts.Euro+47*accounts.Cent)),
+		)
+
+		DescribeTable("the account's balance is correctly updated with concurrent withdraws",
+			func(start accounts.Currency, withdraws []accounts.Currency, expectedBalance accounts.Currency) {
+				var wg sync.WaitGroup
+				var account = accounts.NewBankAccount()
+				Expect(account.Open(start)).To(Succeed())
+
+				wg.Add(len(withdraws))
+				for _, amount := range withdraws {
+					go func(a accounts.Currency) {
+						defer wg.Done()
+
+						time.Sleep(100 + time.Duration(rand.Intn(500)+1)*time.Millisecond)
+						_, err := account.Withdraw(a)
+						Expect(err).To(BeNil())
+					}(amount)
+				}
+				wg.Wait()
+
+				Expect(account.Balance()).To(Equal(expectedBalance))
+			},
+			func(start accounts.Currency, withdraws []accounts.Currency, expectedBalance accounts.Currency) string {
+				return fmt.Sprintf("start: %d - withdraws: %v - expected balance: %d", start, withdraws, expectedBalance)
 			},
 			Entry(nil, 10*accounts.Euro, []accounts.Currency{}, 10*accounts.Euro),
 			Entry(nil, 10*accounts.Euro, []accounts.Currency{1 * accounts.Euro}, 9*accounts.Euro),
