@@ -162,5 +162,26 @@ var _ = Describe("Account", func() {
 			_, err := account.Withdraw(2000 * accounts.Euro)
 			Expect(err).To(Equal(accounts.ErrorInsufficientCredit))
 		})
+
+		DescribeTable("the account's balance is correctly updated after sequential withdraws",
+			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) {
+				var account = accounts.NewBankAccount()
+				Expect(account.Open(start)).To(Succeed())
+
+				for _, amount := range deposits {
+					_, err := account.Withdraw(amount)
+					Expect(err).To(BeNil())
+				}
+				Expect(account.Balance()).To(Equal(expectedBalance))
+			},
+			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) string {
+				return fmt.Sprintf("start: %d - deposits: %v - expected balance: %d", start, deposits, expectedBalance)
+			},
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{}, 10*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{1 * accounts.Euro}, 9*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{1 * accounts.Euro, 10 * accounts.Cent}, (8*accounts.Euro+90*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro}, (129*accounts.Euro+50*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro, 3 * accounts.Cent}, (129*accounts.Euro+47*accounts.Cent)),
+		)
 	})
 })
