@@ -73,18 +73,17 @@ var _ = Describe("Account", func() {
 	When("a user deposits money to an open account", func() {
 		var account accounts.Account
 
-		It("fails to deposit an amount = 0", func() {
+		BeforeEach(func() {
 			account = accounts.NewBankAccount()
 			Expect(account.Open(startingCurrency)).To(Succeed())
+		})
 
+		It("fails to deposit an amount = 0", func() {
 			_, err := account.Deposit(0 * accounts.Euro)
 			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
 		})
 
 		It("fails to deposit a negative amount", func() {
-			account = accounts.NewBankAccount()
-			Expect(account.Open(startingCurrency)).To(Succeed())
-
 			_, err := account.Deposit(-100 * accounts.Euro)
 			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
 		})
@@ -139,5 +138,29 @@ var _ = Describe("Account", func() {
 			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro}, (1870*accounts.Euro+50*accounts.Cent)),
 			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro, 3 * accounts.Cent}, (1870*accounts.Euro+53*accounts.Cent)),
 		)
+	})
+
+	When("a user withdraws money from an open account", func() {
+		var account accounts.Account
+
+		BeforeEach(func() {
+			account = accounts.NewBankAccount()
+			Expect(account.Open(startingCurrency)).To(Succeed())
+		})
+
+		It("fails to withdraw an amount = 0", func() {
+			_, err := account.Withdraw(0 * accounts.Euro)
+			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
+		})
+
+		It("fails to withdraw a negative amount", func() {
+			_, err := account.Withdraw(-100 * accounts.Euro)
+			Expect(err).To(Equal(accounts.ErrorInvalidAmount))
+		})
+
+		It("fails to withdraw an amount bigger than the account's balance", func() {
+			_, err := account.Withdraw(2000 * accounts.Euro)
+			Expect(err).To(Equal(accounts.ErrorInsufficientCredit))
+		})
 	})
 })
