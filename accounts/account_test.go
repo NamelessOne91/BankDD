@@ -3,6 +3,9 @@ package accounts_test
 import (
 	"bankdd/accounts"
 	"fmt"
+	"math/rand"
+	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -95,6 +98,36 @@ var _ = Describe("Account", func() {
 					_, err := account.Deposit(amount)
 					Expect(err).To(BeNil())
 				}
+				Expect(account.Balance()).To(Equal(expectedBalance))
+			},
+			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) string {
+				return fmt.Sprintf("start: %d - deposits: %v - expected balance: %d", start, deposits, expectedBalance)
+			},
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{}, 10*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{100 * accounts.Euro}, 110*accounts.Euro),
+			Entry(nil, 10*accounts.Euro, []accounts.Currency{100 * accounts.Euro, 30 * accounts.Cent}, (110*accounts.Euro+30*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro}, (1870*accounts.Euro+50*accounts.Cent)),
+			Entry(nil, 1000*accounts.Euro, []accounts.Currency{150 * accounts.Euro, 50 * accounts.Cent, 720 * accounts.Euro, 3 * accounts.Cent}, (1870*accounts.Euro+53*accounts.Cent)),
+		)
+
+		DescribeTable("the account's balance is correctly updated with concurrent deposits",
+			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) {
+				var wg sync.WaitGroup
+				var account = accounts.NewBankAccount()
+				Expect(account.Open(start)).To(Succeed())
+
+				wg.Add(len(deposits))
+				for _, amount := range deposits {
+					go func(a accounts.Currency) {
+						defer wg.Done()
+
+						time.Sleep(100 + time.Duration(rand.Intn(500)+1)*time.Millisecond)
+						_, err := account.Deposit(a)
+						Expect(err).To(BeNil())
+					}(amount)
+				}
+				wg.Wait()
+
 				Expect(account.Balance()).To(Equal(expectedBalance))
 			},
 			func(start accounts.Currency, deposits []accounts.Currency, expectedBalance accounts.Currency) string {
