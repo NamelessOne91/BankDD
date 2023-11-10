@@ -24,5 +24,8 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Test
+    - name: Ginkgo Test
       run: go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=2 --compilers=2 --randomize-all --randomize-suites --fail-on-pending --keep-going --cover --coverprofile=cover.profile --race --trace --json-report=report.json --poll-progress-after=120s --poll-progress-interval=30s
+
+    - name: Godog Tests - Accounts
+      run: cd ./accounts && go test -v -run ^TestFeatures$
