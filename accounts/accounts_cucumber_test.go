@@ -35,12 +35,18 @@ func TestFeatures(t *testing.T) {
 func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Given(`^I have a new bank account$`, IHaveANewBankAccount)
 	sc.Given(`^I have an active bank account$`, IHaveAnActiveBankAccount)
+
 	sc.When(`^I open it with a starting sum of (-?\d+) euro$`, IOpenWithStartingEuro)
+	sc.When(`^I close it$`, ICloseTheAccount)
+
 	sc.Then(`^it should have a balance of (\d+) euro$`, ItShouldHaveABalanceOf)
 	sc.Then(`^it should be an active account$`, ItShouldBeActive)
+	sc.Then(`^it should be an inactive account$`, ItShouldBeInactive)
 	sc.Then(`^it should have today as opening date$`, ItShouldHaveTodayAsOpenDate)
+	sc.Then(`^it should have today as date of closure$`, ItShouldHaveTodayAsDateOfClosure)
 	sc.Then(`^I should get an invalid amount error$`, IShouldGetInvalidAmountError)
 	sc.Then(`^I should get an error because the account is already open$`, IShouldGetAlreadyOpenError)
+	sc.Then(`^I should get an inactive account error$`, IShouldGetInactiveAccountError)
 }
 
 func IHaveANewBankAccount(ctx context.Context) (context.Context, error) {
@@ -62,6 +68,21 @@ func IOpenWithStartingEuro(ctx context.Context, euro int) (context.Context, erro
 
 	if err := accountCtx.account.Open(Euro * Currency(euro)); err != nil {
 		if euro > 0 && !accountCtx.account.active {
+			return ctx, err
+		}
+		accountCtx.err = err
+	}
+	return ctx, nil
+}
+
+func ICloseTheAccount(ctx context.Context) (context.Context, error) {
+	accountCtx, ok := ctx.Value(accountCtxKey{}).(*accountCtx)
+	if !ok {
+		return ctx, errors.New("no bank account available")
+	}
+
+	if err := accountCtx.account.Close(); err != nil {
+		if accountCtx.account.active {
 			return ctx, err
 		}
 		accountCtx.err = err
@@ -100,6 +121,21 @@ func ItShouldBeActive(ctx context.Context) error {
 	return nil
 }
 
+func ItShouldBeInactive(ctx context.Context) error {
+	accountCtx, ok := ctx.Value(accountCtxKey{}).(*accountCtx)
+	if !ok {
+		return errors.New("no bank account available")
+	}
+	if accountCtx.err != nil {
+		return fmt.Errorf("error in previous step: %s", accountCtx.err)
+	}
+
+	if accountCtx.account.active {
+		return errors.New("expected the account to be flagged as inactive but it is active")
+	}
+	return nil
+}
+
 func ItShouldHaveTodayAsOpenDate(ctx context.Context) error {
 	accountCtx, ok := ctx.Value(accountCtxKey{}).(*accountCtx)
 	if !ok {
@@ -115,6 +151,26 @@ func ItShouldHaveTodayAsOpenDate(ctx context.Context) error {
 			"expected account's open date to be %s - got %s",
 			today.String(),
 			accountCtx.account.openDate.Truncate(time.Minute).String(),
+		)
+	}
+	return nil
+}
+
+func ItShouldHaveTodayAsDateOfClosure(ctx context.Context) error {
+	accountCtx, ok := ctx.Value(accountCtxKey{}).(*accountCtx)
+	if !ok {
+		return errors.New("no bank account available")
+	}
+	if accountCtx.err != nil {
+		return fmt.Errorf("error in previous step: %s", accountCtx.err)
+	}
+
+	today := time.Now().Truncate(time.Minute)
+	if accountCtx.account.closeDate.Truncate(time.Minute).Compare(today) != 0 {
+		return fmt.Errorf(
+			"expected account's closing date to be %s - got %s",
+			today.String(),
+			accountCtx.account.closeDate.Truncate(time.Minute).String(),
 		)
 	}
 	return nil
@@ -139,6 +195,18 @@ func IShouldGetAlreadyOpenError(ctx context.Context) error {
 	}
 	if accountCtx.err != ErrorAccountIsOpen {
 		return fmt.Errorf("expected error in previous step to be %s - got %s", ErrorAccountIsOpen, accountCtx.err)
+	}
+
+	return nil
+}
+
+func IShouldGetInactiveAccountError(ctx context.Context) error {
+	accountCtx, ok := ctx.Value(accountCtxKey{}).(*accountCtx)
+	if !ok {
+		return errors.New("no bank account available")
+	}
+	if accountCtx.err != ErrorInactiveAccount {
+		return fmt.Errorf("expected error in previous step to be %s - got %s", ErrorInactiveAccount, accountCtx.err)
 	}
 
 	return nil

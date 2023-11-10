@@ -24,3 +24,16 @@ Feature: manage bank account
         Given I have an active bank account
         When I open it with a starting sum of 1000 euro
         Then I should get an error because the account is already open
+    
+    Scenario: Close active Bank account
+        Given I have an active bank account
+        When I close it
+        Then it should be an inactive account
+        And it should have today as date of closure
+        And it should have a balance of 0 euro
+    
+    Scenario: Close inactive Bank account
+        Given I have a new bank account
+        When I close it
+        Then I should get an inactive account error
+
